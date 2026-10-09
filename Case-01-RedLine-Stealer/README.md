@@ -1,43 +1,42 @@
-# Incident Ticket: [INC-20231006-041]
+# [INC-20231006-041] Suspicious Network Traffic & Credential Harvesting - RedLine Stealer Activity
 
-1. The program initiated post-execution network traffic to verify outbound internet connectivity by resolving the domain "facebook.com". Subsequently, it established a direct TCP socket connection from the endpoint to destination IP 77.91.124.55, port 19071.
+### Executive Summary (Incident Write-up)
+During our triage, we detected suspicious outbound network connections and unauthorized credential harvesting activity originating from Workstation-01. The malicious binary executed under the masqueraded name `Wextract.exe` and dynamically interacted with `ADVAPI32.dll` to query security descriptors, manipulate access tokens, and escalate privileges. Following execution, the process verified external internet connectivity via DNS resolution to `facebook.com` and established a persistent raw TCP socket connection to a remote C2 server at `77.91.124.55:19071` for staging and exfiltrating harvested credentials, browser session cookies, and system telemetry.
 
-2. The program executed under the binary name: "Wextract.exe" (masquerading as a legitimate Windows archive extraction utility to evade detection).
+### Artifacts
+- **Host Name:** Workstation-01
+- **IP Address:** 10.0.2.15
+- **User/S:** corporate\analyst
+- **OS Type:** WINDOWS 10
+- **Masqueraded Binary Name:** Wextract.exe
+- **Target System Library:** ADVAPI32.dll (Token Manipulation & Privilege Escalation)
+- **Egress Connectivity Check:** facebook.com
+- **C2 Destination IP & Port:** 77.91.124.55:19071
+- **Date/Time that the event was noticed:** 10/06/2023 04:41 UTC
+- **Alert time stamp:** 10/06/2023 04:41 UTC
+- **Number of systems identified:** 1 Endpoint (Workstation-01)
 
-3. The executable dynamically interacted with "ADVAPI32.dll" to query security descriptors, manipulate access tokens, and escalate privileges for local credential harvesting.
+### Text explaining why below data is important to IOCs
+The forensics indicate active host infection by the information-stealing Trojan RedLine Stealer (cataloged under the threat alias RECORDSTEALER). Masquerading as the legitimate Windows extraction tool (`Wextract.exe`) allows the malware to bypass basic process reputation checks, while interacting with `ADVAPI32.dll` facilitates access token theft and privilege escalation. The high-risk egress session over non-standard port 19071 confirms active staging and exfiltration of browser data, cryptocurrency wallet credentials, and host hardware telemetry directly to threat-actor-controlled infrastructure.
 
-### Artifacts:
+### Declaration
+True Pos. - Issue, because of that was a dynamic incident.
 
-* **Host name:** Workstation-01
-* **IP Address:** 10.0.2.15
-* **User/S:** corporate\analyst
-* **OS Type:** WINDOWS 10
-* **Date/Time that the event was noticed:** 10/06/2023 04:41 UTC
-* **Alert time stamp:** 10/06/2023 04:41 UTC
-* **Number of systems identified:** Endpoint
+### Recommendations
+- **Isolation of the infected system:** Immediately isolate workstation Workstation-01 (10.0.2.15) from the network via EDR to prevent lateral movement and further exfiltration.
+- **Blocking malicious network indicators:** Block the destination C2 IP address (77.91.124.55) and outbound traffic on non-standard port 19071 across perimeter firewalls and web gateways.
+- **EDR Hash & Binary Blocking:** Block the file hash associated with the rogue `Wextract.exe` binary across all endpoints enterprise-wide.
+- **Credential Revocation & Identity Reset:** Invalidate all active domain Kerberos tickets/tokens, force a password reset for compromised user `corporate\analyst`, and revoke all active corporate browser session cookies.
+- **Endpoint Remediation:** Perform forensic triage on the host drive to identify the initial dropper path, terminate persistence mechanisms, and re-image the workstation prior to production redeployment.
 
-**Text explaining why below data is important to IOCs:**  
-The forensics in the events indicate the execution of an information-stealing Trojan identified as RedLine Stealer (documented in Malpedia as RECORDSTEALER). A Trojan virus masquerades as legitimate software to infiltrate systems. Once active, it harvests stored credentials, browser session cookies, cryptocurrency wallets, and system hardware specifications before transmitting the data to remote Command and Control infrastructure over non-standard port 19071.
+### References
+- https://cyberdefenders.org/
+- https://www.virustotal.com/
+- https://malpedia.caad.fkie.fraunhofer.de/
+- https://bazaar.abuse.ch/
 
-**Declaration:** True Pos. - Issue, because of that was a dynamic incident.
-
-### Recommendations:
-* Isolation of the infected system via EDR
-* Blocking malicious destination IP (77.91.124.55) and port (19071) at boundary firewalls
-* Blocking of the file hash in EDR across all endpoints
-* Revocation and password resets for compromised user credentials and active browser sessions
-* Have to remediate the infected system, remove persistence hooks, or rollback / re-image if needed
-
-### References:
-* https://www.virustotal.com/
-* https://malpedia.caad.fkie.fraunhofer.de/
-* https://bazaar.abuse.ch/
-* https://cyberdefenders.org/
-
-### OSINT Links:
-* VirusTotal indicates initial submission was recorded at 2023-10-06 04:41 UTC and categorized as Trojan
-* Malpedia confirms malware alias as RECORDSTEALER associated with IP 77.91.124.55: https://malpedia.caad.fkie.fraunhofer.de/details/win.recordstealer
-* MalwareBazaar community YARA detection rule "detect_Redline_Stealer" by author Varp0s: https://bazaar.abuse.ch/
-* C2 Destination IP and port: 77.91.124.55:19071
-* Resolved egress check domain: facebook.com
-* Target system library used for token manipulation: ADVAPI32.dll
+### OSINT Links
+- **CyberDefenders Challenge Reference:** https://cyberdefenders.org/
+- **VirusTotal Classification:** Categorized as Trojan (Initial submission: 2023-10-06 04:41 UTC)
+- **Malpedia Threat Alias:** Confirmed as RedLine Stealer / RECORDSTEALER linked to C2 infrastructure: https://malpedia.caad.fkie.fraunhofer.de/details/win.recordstealer
+- **MalwareBazaar Community Detection:** YARA detection rule `detect_Redline_Stealer` by author Varp0s: https://bazaar.abuse.ch/
